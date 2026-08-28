@@ -35,6 +35,7 @@
 *.xcodeproj
 *.xcworkspace
 *.sln
+*.slnx
 *.suo
 *.opensdf
 *.sdf
@@ -73,3 +74,22 @@ Plugins/**/Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# Rider
+.idea/
+Plugins/Developer/RiderLink/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Personal collections and developer folders
+Content/Collections/
+Content/Developers/
+
+# Crash dumps and debug symbols
+*.stackdump
+*.udebugsymbols
+
+# Local MCP server configuration
+.mcp.json
