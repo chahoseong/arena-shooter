@@ -54,6 +54,11 @@ Document alternatives and trade-offs only when the choice meaningfully affects b
 
 Break the plan into small implementation tasks after the implementation approach is understood. The number and size of tasks should match the complexity of the feature.
 
+## Implementation Conventions
+
+- Implement gameplay logic in C++.
+- Expose asset references and tuning values as editable properties, and set them in Blueprint subclasses.
+
 ## Task Execution
 
 - Inspect the relevant existing code before making changes. Do not guess how the current implementation works.
