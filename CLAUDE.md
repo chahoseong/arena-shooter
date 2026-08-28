@@ -8,27 +8,51 @@
 
 ## Feature Specifications
 
-A feature specification defines the required behavior of a feature and how its completion can be verified.
+A feature specification defines what behavior is required and how completion can be verified.
 
 When defining or reviewing a feature specification:
 
 - Include only the detail needed to remove meaningful ambiguity.
 - Adjust the level of detail to the feature's complexity, ambiguity, interactions, and verification needs.
 - Focus on required behavior and constraints rather than implementation details.
-- Do not introduce implementation architecture, classes, APIs, files, or task breakdowns unless they are themselves explicit requirements.
-- Use additional sections such as constraints, boundaries, edge cases, or out-of-scope items only when they materially clarify the feature.
+- Keep implementation choices open when they can reasonably be decided during implementation planning.
 - Do not mechanically fill a fixed template when a simpler specification is sufficient.
 
-A specification should make the following clear where relevant:
+A specification should answer the following questions where relevant:
 
 - **Intent** — Why does the feature exist?
 - **Behavior** — What must the feature do?
-- **Boundary** — What is and is not the responsibility of this feature?
+- **Boundary** — What is and is not the responsibility of the feature?
 - **Verification** — How can we determine that the required behavior is complete?
 
-These are questions the specification should answer, not mandatory document sections.
+These are guiding questions, not mandatory document sections.
 
-Implementation choices that can reasonably be decided later should remain open until implementation planning.
+Classes, APIs, files, architecture, implementation sequence, and task breakdown belong in implementation planning unless they are explicit requirements.
+
+## Implementation Planning
+
+An implementation plan defines how the current codebase should change to satisfy an approved feature specification.
+
+A good implementation plan should be:
+
+- **Grounded** — Inspect the relevant existing code first and base the plan on the actual codebase rather than assumptions.
+- **Minimal** — Design only what is needed for the current requirements. Do not implement speculative future requirements.
+- **Executable** — The plan should lead to a practical implementation sequence and a way to verify the result.
+
+When planning, consider the following questions where relevant:
+
+- **Current State** — How does the related code currently work?
+- **Change** — What needs to be added, removed, or changed?
+- **Design** — Are there meaningful design decisions or trade-offs?
+- **Sequence** — In what order should the changes be implemented?
+- **Verification** — How will the implementation be verified?
+- **Risks / Unknowns** — Are there unresolved issues that affect the plan?
+
+These are guiding questions, not a required template.
+
+Document alternatives and trade-offs only when the choice meaningfully affects behavior, structure, maintainability, or scope.
+
+Break the plan into small implementation tasks after the implementation approach is understood. The number and size of tasks should match the complexity of the feature.
 
 ## Task Execution
 
