@@ -23,6 +23,7 @@ Move & Shoot
 ### Player
 
 - Third-person movement and camera
+- Jump
 - Aim
 - Basic ranged attack
 - Dash
