@@ -28,6 +28,7 @@ Move & Shoot
 - Basic ranged attack
 - Dash
 - Health, hit, and death
+- Animation for movement, jump, aim, attack, dash, hit, and death
 
 ### Enemy
 
