@@ -7,6 +7,10 @@ public class ArenaShooter : ModuleRules
 	public ArenaShooter(ReadOnlyTargetRules Target) : base(Target)
 	{
 		PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+
+		// This module has no Public/Private split, so nothing puts its root on the include path.
+		// Add it so headers can be included by their path from the module root.
+		PublicIncludePaths.Add(ModuleDirectory);
 	
 		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput" });
 
