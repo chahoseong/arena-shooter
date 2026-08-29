@@ -137,6 +137,13 @@ void AArenaShooterPlayerCharacter::Fire()
 		return;
 	}
 
+	// One montage play per shot. Replaying the same montage restarts it, so the recoil reads
+	// once per trigger pull rather than continuing from where the last shot left off.
+	if (FireMontage)
+	{
+		PlayAnimMontage(FireMontage);
+	}
+
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
 

@@ -9,6 +9,7 @@
 class UCameraComponent;
 class USpringArmComponent;
 class UInputAction;
+class UAnimMontage;
 class UInputMappingContext;
 struct FInputActionValue;
 
@@ -65,7 +66,7 @@ private:
 
 	/** Seconds between shots while the fire input is held. */
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true", ClampMin = "0.01"))
-	float FireInterval = 0.15f;
+	float FireInterval = 0.5f;
 
 	/**
 	 * How far a shot reaches, measured from the muzzle. Raising this past the arena's diagonal
@@ -77,6 +78,10 @@ private:
 	/** Payload for the hit notification. Placeholder: balance belongs to health, hit and death. */
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
 	float Damage = 10.0f;
+
+	/** Upper-body montage played once per shot. */
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> FireMontage;
 
 	/**
 	 * Socket on the character mesh that shots start from. Bone-attached, so it follows animation.
