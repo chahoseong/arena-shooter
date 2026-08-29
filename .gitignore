@@ -83,9 +83,10 @@ Plugins/Developer/RiderLink/
 .vscode/
 *.code-workspace
 
-# Personal collections and developer folders
-Content/Collections/
-Content/Developers/
+# Content: only project-owned assets are tracked.
+# Third-party asset packs (Fab/Paragon, etc.) cannot be redistributed and are large.
+Content/*
+!Content/ArenaShooter/
 
 # Crash dumps and debug symbols
 *.stackdump
