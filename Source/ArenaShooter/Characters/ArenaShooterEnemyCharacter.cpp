@@ -31,6 +31,15 @@ AArenaShooterEnemyCharacter::AArenaShooterEnemyCharacter()
 	// Matches the running sample in the locomotion blend space, so the feet do not slide.
 	GetCharacterMovement()->MaxWalkSpeed = 420.0f;
 
+	// Two pieces, two questions. The capsule walks the world and blocks other characters; the mesh
+	// is what a shot hits. Shots and the camera boom pass straight through the capsule, so hits are
+	// decided against the silhouette and a character at close range does not shove the camera about.
+	//
+	// Profiles rather than response overrides: a Blueprint that stores a profile name overrides every
+	// response set from here, silently and with no sign of it in the details panel.
+	GetCapsuleComponent()->SetCollisionProfileName(TEXT("ArenaShooterPawnCapsule"));
+	GetMesh()->SetCollisionProfileName(TEXT("ArenaShooterPawnMesh"));
+
 	Health = CreateDefaultSubobject<UArenaShooterHealthComponent>(TEXT("Health"));
 	MeleeAttack = CreateDefaultSubobject<UArenaShooterMeleeAttackComponent>(TEXT("MeleeAttack"));
 	MotionWarping = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));

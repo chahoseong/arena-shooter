@@ -3,6 +3,7 @@
 #include "ArenaShooterPlayerCharacter.h"
 
 #include "Camera/CameraComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "Combat/ArenaShooterAimComponent.h"
 #include "Combat/ArenaShooterWeaponComponent.h"
 #include "DrawDebugHelpers.h"
@@ -27,6 +28,15 @@ AArenaShooterPlayerCharacter::AArenaShooterPlayerCharacter()
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationRoll = false;
 	GetCharacterMovement()->bOrientRotationToMovement = false;
+
+	// Two pieces, two questions. The capsule walks the world and blocks other characters; the mesh
+	// is what a shot hits. Shots and the camera boom pass straight through the capsule, so hits are
+	// decided against the silhouette and a character at close range does not shove the camera about.
+	//
+	// Profiles rather than response overrides: a Blueprint that stores a profile name overrides every
+	// response set from here, silently and with no sign of it in the details panel.
+	GetCapsuleComponent()->SetCollisionProfileName(TEXT("ArenaShooterPawnCapsule"));
+	GetMesh()->SetCollisionProfileName(TEXT("ArenaShooterPawnMesh"));
 
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
 	CameraBoom->SetupAttachment(RootComponent);
