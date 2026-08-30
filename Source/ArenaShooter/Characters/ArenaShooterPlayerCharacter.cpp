@@ -3,6 +3,7 @@
 #include "ArenaShooterPlayerCharacter.h"
 
 #include "Camera/CameraComponent.h"
+#include "Combat/ArenaShooterAimComponent.h"
 #include "Combat/ArenaShooterWeaponComponent.h"
 #include "DrawDebugHelpers.h"
 #include "EnhancedInputComponent.h"
@@ -38,38 +39,29 @@ AArenaShooterPlayerCharacter::AArenaShooterPlayerCharacter()
 	FollowCamera->bUsePawnControlRotation = false;
 
 	Weapon = CreateDefaultSubobject<UArenaShooterWeaponComponent>(TEXT("Weapon"));
+	Aim = CreateDefaultSubobject<UArenaShooterAimComponent>(TEXT("Aim"));
 }
 
 void AArenaShooterPlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Remember what the Blueprint configured; these are the targets when not aiming.
-	DefaultArmLength = CameraBoom->TargetArmLength;
-	DefaultShoulderOffset = CameraBoom->SocketOffset.Y;
-	DefaultFieldOfView = FollowCamera->FieldOfView;
-	DefaultWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+	// Hand the camera over piece by piece; each is recorded as it is given.
+	Aim->SetSpringArm(CameraBoom);
+	Aim->SetCamera(FollowCamera);
+
+	BaseWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
 }
 
 void AArenaShooterPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	const float TargetArmLength = bIsAiming ? AimArmLength : DefaultArmLength;
-	const float TargetShoulder = bIsAiming ? AimShoulderOffset : DefaultShoulderOffset;
-	const float TargetFieldOfView = bIsAiming ? AimFieldOfView : DefaultFieldOfView;
-	const float TargetWalkSpeed = bIsAiming ? AimWalkSpeed : DefaultWalkSpeed;
+	Aim->Update(DeltaSeconds);
 
-	CameraBoom->TargetArmLength =
-		FMath::FInterpTo(CameraBoom->TargetArmLength, TargetArmLength, DeltaSeconds, AimBlendSpeed);
-	CameraBoom->SocketOffset.Y =
-		FMath::FInterpTo(CameraBoom->SocketOffset.Y, TargetShoulder, DeltaSeconds, AimBlendSpeed);
-	FollowCamera->SetFieldOfView(
-		FMath::FInterpTo(FollowCamera->FieldOfView, TargetFieldOfView, DeltaSeconds, AimBlendSpeed));
-
-	UCharacterMovementComponent* Movement = GetCharacterMovement();
-	Movement->MaxWalkSpeed =
-		FMath::FInterpTo(Movement->MaxWalkSpeed, TargetWalkSpeed, DeltaSeconds, AimBlendSpeed);
+	// Speed is shared ground: aiming only offers a multiplier and the owner applies the result,
+	// so a later contributor such as a dash has somewhere to be combined in.
+	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed * Aim->GetSpeedMultiplier();
 
 	// Resolved once and shared: the marker shows exactly what a shot would be aimed at.
 	const FArenaShooterAimTarget AimTarget = GetAimTarget();
@@ -135,11 +127,12 @@ void AArenaShooterPlayerCharacter::SetupPlayerInputComponent(UInputComponent* Pl
 		Input->BindAction(FireAction, ETriggerEvent::Canceled, WeaponPtr, &UArenaShooterWeaponComponent::StopFiring);
 	}
 
-	if (AimAction)
+	if (AimAction && Aim)
 	{
-		Input->BindAction(AimAction, ETriggerEvent::Started, this, &AArenaShooterPlayerCharacter::StartAiming);
-		Input->BindAction(AimAction, ETriggerEvent::Completed, this, &AArenaShooterPlayerCharacter::StopAiming);
-		Input->BindAction(AimAction, ETriggerEvent::Canceled, this, &AArenaShooterPlayerCharacter::StopAiming);
+		UArenaShooterAimComponent* AimPtr = Aim.Get();
+		Input->BindAction(AimAction, ETriggerEvent::Started, AimPtr, &UArenaShooterAimComponent::StartAiming);
+		Input->BindAction(AimAction, ETriggerEvent::Completed, AimPtr, &UArenaShooterAimComponent::StopAiming);
+		Input->BindAction(AimAction, ETriggerEvent::Canceled, AimPtr, &UArenaShooterAimComponent::StopAiming);
 	}
 }
 
@@ -165,22 +158,13 @@ void AArenaShooterPlayerCharacter::Look(const FInputActionValue& Value)
 {
 	const FVector2D LookInput = Value.Get<FVector2D>();
 
-	// Aiming turns the view more slowly so distant targets can be lined up.
-	const float Scale = bIsAiming ? AimLookScale : 1.0f;
+	// Aiming turns the view more slowly so distant targets can be lined up. It follows the same
+	// transition as the camera rather than switching outright.
+	const float Scale = Aim->GetLookScale();
 
 	// Pitch inversion is handled by a Negate modifier on the input action.
 	AddControllerYawInput(LookInput.X * Scale);
 	AddControllerPitchInput(LookInput.Y * Scale);
-}
-
-void AArenaShooterPlayerCharacter::StartAiming()
-{
-	bIsAiming = true;
-}
-
-void AArenaShooterPlayerCharacter::StopAiming()
-{
-	bIsAiming = false;
 }
 
 FArenaShooterAimTarget AArenaShooterPlayerCharacter::GetAimTarget() const

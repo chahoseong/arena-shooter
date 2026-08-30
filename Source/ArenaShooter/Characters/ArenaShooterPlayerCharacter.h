@@ -10,6 +10,7 @@
 class UCameraComponent;
 class USpringArmComponent;
 class UInputAction;
+class UArenaShooterAimComponent;
 class UArenaShooterWeaponComponent;
 class UInputMappingContext;
 struct FInputActionValue;
@@ -39,9 +40,6 @@ private:
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 
-	void StartAiming();
-	void StopAiming();
-
 	/** What the centre of the screen points at, and the direction it was found along. */
 	FArenaShooterAimTarget GetAimTarget() const;
 
@@ -53,6 +51,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UArenaShooterWeaponComponent> Weapon;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Aim", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UArenaShooterAimComponent> Aim;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
@@ -75,28 +76,6 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> AimAction;
 
-	/** Boom length while aiming. The length outside aim is whatever the Blueprint set. */
-	UPROPERTY(EditDefaultsOnly, Category = "Aim", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float AimArmLength = 150.0f;
-
-	/** Sideways camera offset while aiming, so the character does not cover the aim point. */
-	UPROPERTY(EditDefaultsOnly, Category = "Aim", meta = (AllowPrivateAccess = "true"))
-	float AimShoulderOffset = 50.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Aim", meta = (AllowPrivateAccess = "true", ClampMin = "5.0", ClampMax = "170.0"))
-	float AimFieldOfView = 65.0f;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Aim", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float AimWalkSpeed = 300.0f;
-
-	/** Look input is scaled by this while aiming, so the view turns more slowly. */
-	UPROPERTY(EditDefaultsOnly, Category = "Aim", meta = (AllowPrivateAccess = "true", ClampMin = "0.01"))
-	float AimLookScale = 0.5f;
-
-	/** How quickly the camera, speed and field of view reach their aimed or unaimed values. */
-	UPROPERTY(EditDefaultsOnly, Category = "Aim", meta = (AllowPrivateAccess = "true", ClampMin = "0.1"))
-	float AimBlendSpeed = 10.0f;
-
 	/**
 	 * Draws a marker on whatever the centre of the screen points at. Verification instrumentation
 	 * rather than presentation: without a reference point there is no way to judge whether the
@@ -105,12 +84,7 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Aim", meta = (AllowPrivateAccess = "true"))
 	bool bDrawAimDebug = true;
 
-	bool bIsAiming = false;
-
-	// Captured on BeginPlay rather than hardcoded, so the Blueprint's values stay authoritative.
-	float DefaultArmLength = 0.0f;
-	float DefaultShoulderOffset = 0.0f;
-	float DefaultFieldOfView = 0.0f;
-	float DefaultWalkSpeed = 0.0f;
+	/** Unaimed speed, captured on BeginPlay. Contributions are multiplied onto it. */
+	float BaseWalkSpeed = 0.0f;
 
 };
