@@ -37,4 +37,15 @@ void UArenaShooterAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	{
 		bIsInAir = Movement->IsFalling();
 	}
+
+	// How far the view has strayed from where the body faces. Yaw closes itself, since the body
+	// turns to follow the view; pitch cannot, because the pawn is never pitched, so the aim
+	// offset covers it in the pose instead.
+	//
+	// FRotator subtraction is per-axis, not a rotation composition, so this is only the true
+	// local difference while the actor has no pitch or roll. That holds here. If the actor is
+	// ever pitched, this needs the quaternion form: ActorQuat.Inverse() * FQuat(AimRotation).
+	const FRotator AimDelta =
+		(OwningCharacter->GetBaseAimRotation() - OwningCharacter->GetActorRotation()).GetNormalized();
+	Pitch = AimDelta.Pitch;
 }

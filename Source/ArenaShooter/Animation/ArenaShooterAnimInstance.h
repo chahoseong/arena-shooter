@@ -33,6 +33,14 @@ protected:
 	UPROPERTY(BlueprintReadOnly, Category = "Locomotion")
 	bool bIsInAir = false;
 
+	/**
+	 * How far above or below the horizon the character is looking, -90..90. Drives the aim offset
+	 * so that looking up or down is visible in the pose. Yaw has no equivalent: the body turns to
+	 * face the view immediately, so there is never a difference for the upper body to absorb.
+	 */
+	UPROPERTY(BlueprintReadOnly, Category = "Aim")
+	float Pitch = 0.0f;
+
 private:
 	UPROPERTY(Transient)
 	TObjectPtr<ACharacter> OwningCharacter;
