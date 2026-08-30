@@ -37,6 +37,7 @@ Move & Shoot
 - Move toward the player
 - Basic melee attack
 - Health, hit, and death
+- Animation for movement, attack, hit, and death
 
 ### Game Flow
 
