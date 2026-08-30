@@ -41,6 +41,12 @@ public:
 	/** Decides the swing where it stands: reach, angle, and the evidence that it happened. */
 	void ResolveHit();
 
+private:
+	UFUNCTION()
+	void HandleMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+public:
+
 	/** Drops a swing in flight without deciding it. Safe to call when there is nothing to drop. */
 	void CancelAttack();
 
@@ -62,6 +68,13 @@ private:
 	float Damage = 20.0f;
 
 	/**
+	 * The swing itself. Left unset here: the animation belongs to whichever mesh the Blueprint picks.
+	 * Its slot has to be one the animation blueprint evaluates, and the hit notify lives on it.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Melee")
+	TObjectPtr<UAnimMontage> AttackMontage;
+
+	/**
 	 * Draws the arc the swing was decided against, and where the target stood at that moment.
 	 * Verification instrumentation rather than presentation: being hit has no other visible
 	 * consequence yet. Remove it once the player has health.
@@ -73,7 +86,14 @@ private:
 	UPROPERTY(Transient)
 	TObjectPtr<AActor> AttackTarget;
 
+	/** A swing is in flight: the montage is still running. What the behaviour tree waits on. */
 	bool bIsAttacking = false;
+
+	/**
+	 * This swing has already been decided. Separate from bIsAttacking because the decision lands
+	 * partway through, and the swing keeps running afterwards.
+	 */
+	bool bHitResolved = false;
 
 	/** Stamped rather than accumulated, since nothing advances this component per frame. */
 	double LastAttackStartTime = -UE_BIG_NUMBER;

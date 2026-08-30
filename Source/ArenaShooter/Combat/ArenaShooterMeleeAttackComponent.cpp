@@ -2,6 +2,9 @@
 
 #include "Combat/ArenaShooterMeleeAttackComponent.h"
 
+#include "Animation/AnimInstance.h"
+#include "Animation/AnimMontage.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
@@ -33,29 +36,54 @@ bool UArenaShooterMeleeAttackComponent::CanAttack(const AActor* Target) const
 bool UArenaShooterMeleeAttackComponent::StartAttack(AActor* Target)
 {
 	UWorld* World = GetWorld();
-	if (Target == nullptr || World == nullptr)
+	ACharacter* Owner = GetOwner<ACharacter>();
+	if (Target == nullptr || World == nullptr || Owner == nullptr || AttackMontage == nullptr)
+	{
+		return false;
+	}
+
+	// Zero means the montage could not start, usually because its slot is not one the animation
+	// blueprint evaluates. Reporting failure keeps the tree from waiting out a swing that is not
+	// happening.
+	if (Owner->PlayAnimMontage(AttackMontage) <= 0.0f)
 	{
 		return false;
 	}
 
 	AttackTarget = Target;
 	bIsAttacking = true;
+	bHitResolved = false;
 	LastAttackStartTime = World->GetTimeSeconds();
 
+	// Asked rather than timed, so that a montage cut short is noticed rather than waited out.
+	if (UAnimInstance* AnimInstance = Owner->GetMesh() ? Owner->GetMesh()->GetAnimInstance() : nullptr)
+	{
+		FOnMontageEnded EndDelegate;
+		EndDelegate.BindUObject(this, &UArenaShooterMeleeAttackComponent::HandleMontageEnded);
+		AnimInstance->Montage_SetEndDelegate(EndDelegate, AttackMontage);
+	}
+
 	return true;
+}
+
+void UArenaShooterMeleeAttackComponent::HandleMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+	CancelAttack();
 }
 
 void UArenaShooterMeleeAttackComponent::ResolveHit()
 {
 	// A swing that was dropped must not still land. Death drops it, and the death montage does not
 	// cut the attack montage short, so its hit notify can arrive after the enemy is gone.
-	if (!bIsAttacking)
+	//
+	// bIsAttacking is not cleared here: the swing carries on to the end of the montage, and the tree
+	// is waiting on that. Only the decision is spent.
+	if (!bIsAttacking || bHitResolved)
 	{
 		return;
 	}
 
-	// One decision per swing, whatever else happens to the montage afterwards.
-	bIsAttacking = false;
+	bHitResolved = true;
 
 	UWorld* World = GetWorld();
 	AActor* Owner = GetOwner();
