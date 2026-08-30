@@ -3,10 +3,12 @@
 #include "ArenaShooterEnemyCharacter.h"
 
 #include "Combat/ArenaShooterHealthComponent.h"
+#include "Combat/ArenaShooterMeleeAttackComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "MotionWarpingComponent.h"
 #include "TimerManager.h"
 
 AArenaShooterEnemyCharacter::AArenaShooterEnemyCharacter()
@@ -30,6 +32,8 @@ AArenaShooterEnemyCharacter::AArenaShooterEnemyCharacter()
 	GetCharacterMovement()->MaxWalkSpeed = 420.0f;
 
 	Health = CreateDefaultSubobject<UArenaShooterHealthComponent>(TEXT("Health"));
+	MeleeAttack = CreateDefaultSubobject<UArenaShooterMeleeAttackComponent>(TEXT("MeleeAttack"));
+	MotionWarping = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarping"));
 }
 
 void AArenaShooterEnemyCharacter::BeginPlay()
@@ -41,6 +45,10 @@ void AArenaShooterEnemyCharacter::BeginPlay()
 
 void AArenaShooterEnemyCharacter::HandleDeath()
 {
+	// Before anything else. The death montage blends the attack montage out rather than cutting it,
+	// and a montage blending out keeps running, so a swing left in flight can still land on a corpse.
+	MeleeAttack->CancelAttack();
+
 	GetCharacterMovement()->StopMovementImmediately();
 	GetCharacterMovement()->DisableMovement();
 

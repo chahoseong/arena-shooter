@@ -8,6 +8,8 @@
 
 class UAnimMontage;
 class UArenaShooterHealthComponent;
+class UArenaShooterMeleeAttackComponent;
+class UMotionWarpingComponent;
 
 /**
  * Melee enemy. Turns to face wherever its controller is looking, unlike the player, who keeps
@@ -43,6 +45,16 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UArenaShooterHealthComponent> Health;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Melee", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UArenaShooterMeleeAttackComponent> MeleeAttack;
+
+	/**
+	 * Turns the swing towards its target during the attack montage's warping window. Builds its own
+	 * character adapter when the component initialises, so there is nothing to hand it here.
+	 */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Melee", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UMotionWarpingComponent> MotionWarping;
 
 	/**
 	 * Set per placed enemy, so it lives on the pawn rather than the controller: controllers are

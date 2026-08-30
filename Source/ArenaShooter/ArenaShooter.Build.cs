@@ -12,7 +12,7 @@ public class ArenaShooter : ModuleRules
 		// Add it so headers can be included by their path from the module root.
 		PublicIncludePaths.Add(ModuleDirectory);
 	
-		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AnimGraphRuntime", "AIModule", "NavigationSystem", "GameplayTasks" });
+		PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "AnimGraphRuntime", "AIModule", "NavigationSystem", "GameplayTasks", "MotionWarping" });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
 
