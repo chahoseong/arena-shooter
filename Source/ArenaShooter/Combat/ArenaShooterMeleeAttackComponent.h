@@ -75,6 +75,14 @@ private:
 	TObjectPtr<UAnimMontage> AttackMontage;
 
 	/**
+	 * Must match the Warp Target Name on the montage's Motion Warping notify. It is the contract with
+	 * a hand-authored asset, and a mismatch is quiet: the swing plays and lands as usual, and only
+	 * the turn towards the target goes missing.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Melee")
+	FName WarpTargetName = TEXT("MeleeTarget");
+
+	/**
 	 * Draws the arc the swing was decided against, and where the target stood at that moment.
 	 * Verification instrumentation rather than presentation: being hit has no other visible
 	 * consequence yet. Remove it once the player has health.

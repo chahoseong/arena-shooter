@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 #include "GameFramework/Character.h"
 #include "Kismet/GameplayStatics.h"
+#include "MotionWarpingComponent.h"
 
 UArenaShooterMeleeAttackComponent::UArenaShooterMeleeAttackComponent()
 {
@@ -40,6 +41,18 @@ bool UArenaShooterMeleeAttackComponent::StartAttack(AActor* Target)
 	if (Target == nullptr || World == nullptr || Owner == nullptr || AttackMontage == nullptr)
 	{
 		return false;
+	}
+
+	// Before the montage, because the warping window can open on its very first frame and a modifier
+	// that cannot find its target by name gives up for the rest of the montage.
+	//
+	// Where the target stands now, not a component to follow: committing to that spot is what makes
+	// stepping aside during the wind-up a miss rather than something the swing tracks. The rotation
+	// argument goes unused, since the modifier recomputes facing from the location each frame.
+	if (UMotionWarpingComponent* Warping = Owner->FindComponentByClass<UMotionWarpingComponent>())
+	{
+		Warping->AddOrUpdateWarpTargetFromLocationAndRotation(
+			WarpTargetName, Target->GetActorLocation(), FRotator::ZeroRotator);
 	}
 
 	// Zero means the montage could not start, usually because its slot is not one the animation
@@ -131,4 +144,12 @@ void UArenaShooterMeleeAttackComponent::CancelAttack()
 	// in no fixed order, so dropping nothing has to be a no-op rather than a mistake.
 	bIsAttacking = false;
 	AttackTarget = nullptr;
+
+	if (AActor* Owner = GetOwner())
+	{
+		if (UMotionWarpingComponent* Warping = Owner->FindComponentByClass<UMotionWarpingComponent>())
+		{
+			Warping->RemoveWarpTarget(WarpTargetName);
+		}
+	}
 }
