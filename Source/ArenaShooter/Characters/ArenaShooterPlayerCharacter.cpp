@@ -3,7 +3,7 @@
 #include "ArenaShooterPlayerCharacter.h"
 
 #include "Camera/CameraComponent.h"
-#include "Components/SkeletalMeshComponent.h"
+#include "Combat/ArenaShooterWeaponComponent.h"
 #include "DrawDebugHelpers.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
@@ -11,9 +11,10 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "InputActionValue.h"
-#include "Kismet/GameplayStatics.h"
 #include "Physics/ArenaShooterCollisionChannels.h"
-#include "TimerManager.h"
+
+// Only reached if the weapon component is missing, which the constructor prevents.
+static constexpr float FallbackAimDistance = 10000.0f;
 
 AArenaShooterPlayerCharacter::AArenaShooterPlayerCharacter()
 {
@@ -35,6 +36,8 @@ AArenaShooterPlayerCharacter::AArenaShooterPlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+
+	Weapon = CreateDefaultSubobject<UArenaShooterWeaponComponent>(TEXT("Weapon"));
 }
 
 void AArenaShooterPlayerCharacter::BeginPlay()
@@ -68,10 +71,15 @@ void AArenaShooterPlayerCharacter::Tick(float DeltaSeconds)
 	Movement->MaxWalkSpeed =
 		FMath::FInterpTo(Movement->MaxWalkSpeed, TargetWalkSpeed, DeltaSeconds, AimBlendSpeed);
 
+	// Resolved once and shared: the marker shows exactly what a shot would be aimed at.
+	const FArenaShooterAimTarget AimTarget = GetAimTarget();
+
 	if (bDrawAimDebug)
 	{
-		DrawDebugSphere(GetWorld(), GetAimPoint(), 8.0f, 8, FColor::Cyan, false, -1.0f);
+		DrawDebugSphere(GetWorld(), AimTarget.Point, 8.0f, 8, FColor::Cyan, false, -1.0f);
 	}
+
+	Weapon->Update(DeltaSeconds, AimTarget);
 }
 
 void AArenaShooterPlayerCharacter::NotifyControllerChanged()
@@ -118,11 +126,13 @@ void AArenaShooterPlayerCharacter::SetupPlayerInputComponent(UInputComponent* Pl
 		Input->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
 	}
 
-	if (FireAction)
+	if (FireAction && Weapon)
 	{
-		Input->BindAction(FireAction, ETriggerEvent::Started, this, &AArenaShooterPlayerCharacter::StartFiring);
-		Input->BindAction(FireAction, ETriggerEvent::Completed, this, &AArenaShooterPlayerCharacter::StopFiring);
-		Input->BindAction(FireAction, ETriggerEvent::Canceled, this, &AArenaShooterPlayerCharacter::StopFiring);
+		// BindAction deduces the object type from a raw pointer; a TObjectPtr picks the FName overload.
+		UArenaShooterWeaponComponent* WeaponPtr = Weapon.Get();
+		Input->BindAction(FireAction, ETriggerEvent::Started, WeaponPtr, &UArenaShooterWeaponComponent::StartFiring);
+		Input->BindAction(FireAction, ETriggerEvent::Completed, WeaponPtr, &UArenaShooterWeaponComponent::StopFiring);
+		Input->BindAction(FireAction, ETriggerEvent::Canceled, WeaponPtr, &UArenaShooterWeaponComponent::StopFiring);
 	}
 
 	if (AimAction)
@@ -163,20 +173,6 @@ void AArenaShooterPlayerCharacter::Look(const FInputActionValue& Value)
 	AddControllerPitchInput(LookInput.Y * Scale);
 }
 
-void AArenaShooterPlayerCharacter::StartFiring()
-{
-	// Fire on the press itself, then keep going for as long as the input is held.
-	Fire();
-
-	GetWorldTimerManager().SetTimer(
-		FireTimerHandle, this, &AArenaShooterPlayerCharacter::Fire, FireInterval, true);
-}
-
-void AArenaShooterPlayerCharacter::StopFiring()
-{
-	GetWorldTimerManager().ClearTimer(FireTimerHandle);
-}
-
 void AArenaShooterPlayerCharacter::StartAiming()
 {
 	bIsAiming = true;
@@ -187,12 +183,14 @@ void AArenaShooterPlayerCharacter::StopAiming()
 	bIsAiming = false;
 }
 
-FVector AArenaShooterPlayerCharacter::GetAimPoint() const
+FArenaShooterAimTarget AArenaShooterPlayerCharacter::GetAimTarget() const
 {
 	const FVector CameraLocation = FollowCamera->GetComponentLocation();
 	const FVector CameraForward = FollowCamera->GetForwardVector();
-	// Reach past the muzzle's range by the boom length, so the muzzle's own range stays intact.
-	const FVector AimEnd = CameraLocation + CameraForward * (FireRange + CameraBoom->TargetArmLength);
+
+	// Reach past the weapon's range by the boom length, so the muzzle's own range stays intact.
+	const float Range = Weapon ? Weapon->GetRange() : FallbackAimDistance;
+	const FVector AimEnd = CameraLocation + CameraForward * (Range + CameraBoom->TargetArmLength);
 
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
@@ -200,56 +198,9 @@ FVector AArenaShooterPlayerCharacter::GetAimPoint() const
 	FHitResult AimHit;
 	const bool bHit = GetWorld()->LineTraceSingleByChannel(
 		AimHit, CameraLocation, AimEnd, ArenaShooter_TraceChannel_Weapon, Params);
-	return bHit ? AimHit.ImpactPoint : AimEnd;
-}
 
-void AArenaShooterPlayerCharacter::Fire()
-{
-	UWorld* World = GetWorld();
-	if (World == nullptr || FollowCamera == nullptr || GetMesh() == nullptr)
-	{
-		return;
-	}
-
-	// One montage play per shot. Replaying the same montage restarts it, so the recoil reads
-	// once per trigger pull rather than continuing from where the last shot left off.
-	if (FireMontage)
-	{
-		PlayAnimMontage(FireMontage);
-	}
-
-	FCollisionQueryParams Params;
-	Params.AddIgnoredActor(this);
-
-	// Stage 1: what the centre of the screen points at. Shared with the aim marker.
-	const FVector CameraForward = FollowCamera->GetForwardVector();
-	const FVector AimPoint = GetAimPoint();
-
-	// Stage 2: the shot itself. Starting at the muzzle is what makes cover between the gun and the
-	// target stop the shot, which a camera-origin trace would see straight over.
-	const FVector MuzzleLocation = GetMesh()->GetSocketLocation(MuzzleSocketName);
-	FVector ShotDirection = (AimPoint - MuzzleLocation).GetSafeNormal();
-
-	// A target pressed against the character can put the aim point behind the muzzle, which would
-	// fire backwards. Fall back to the camera's direction when that happens.
-	if (ShotDirection.IsNearlyZero() || FVector::DotProduct(ShotDirection, CameraForward) <= 0.0)
-	{
-		ShotDirection = CameraForward;
-	}
-
-	const FVector ShotEnd = MuzzleLocation + ShotDirection * FireRange;
-
-	FHitResult ShotHit;
-	const bool bShotHit = World->LineTraceSingleByChannel(
-		ShotHit, MuzzleLocation, ShotEnd, ArenaShooter_TraceChannel_Weapon, Params);
-
-	if (bShotHit && ShotHit.GetActor() != nullptr)
-	{
-		UGameplayStatics::ApplyPointDamage(
-			ShotHit.GetActor(), Damage, ShotDirection, ShotHit, GetController(), this, nullptr);
-	}
-
-	// Verification aid, not presentation: one marker per shot makes the fire rate, the impact point
-	// and the range limit observable while nothing else draws the shot.
-	DrawDebugSphere(World, bShotHit ? ShotHit.ImpactPoint : ShotEnd, 12.0f, 8, FColor::Yellow, false, 1.0f);
+	FArenaShooterAimTarget AimTarget;
+	AimTarget.Point = bHit ? AimHit.ImpactPoint : AimEnd;
+	AimTarget.Direction = CameraForward;
+	return AimTarget;
 }

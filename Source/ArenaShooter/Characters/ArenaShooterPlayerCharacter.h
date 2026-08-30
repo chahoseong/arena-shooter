@@ -3,13 +3,14 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Combat/ArenaShooterWeaponComponent.h"
 #include "GameFramework/Character.h"
 #include "ArenaShooterPlayerCharacter.generated.h"
 
 class UCameraComponent;
 class USpringArmComponent;
 class UInputAction;
-class UAnimMontage;
+class UArenaShooterWeaponComponent;
 class UInputMappingContext;
 struct FInputActionValue;
 
@@ -38,21 +39,20 @@ private:
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 
-	void StartFiring();
-	void StopFiring();
-	void Fire();
-
 	void StartAiming();
 	void StopAiming();
 
-	/** What the centre of the screen points at: the first hit along the camera, or the far end. */
-	FVector GetAimPoint() const;
+	/** What the centre of the screen points at, and the direction it was found along. */
+	FArenaShooterAimTarget GetAimTarget() const;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<USpringArmComponent> CameraBoom;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UCameraComponent> FollowCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UArenaShooterWeaponComponent> Weapon;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
@@ -74,32 +74,6 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputAction> AimAction;
-
-	/** Seconds between shots while the fire input is held. */
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true", ClampMin = "0.01"))
-	float FireInterval = 0.5f;
-
-	/**
-	 * How far a shot reaches, measured from the muzzle. Raising this past the arena's diagonal
-	 * makes the out-of-range case impossible to test inside the arena.
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float FireRange = 8000.0f;
-
-	/** Payload for the hit notification. Placeholder: balance belongs to health, hit and death. */
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
-	float Damage = 10.0f;
-
-	/** Upper-body montage played once per shot. */
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UAnimMontage> FireMontage;
-
-	/**
-	 * Socket on the character mesh that shots start from. Bone-attached, so it follows animation.
-	 * Left unset here: the socket name belongs to whichever mesh the Blueprint picks.
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
-	FName MuzzleSocketName;
 
 	/** Boom length while aiming. The length outside aim is whatever the Blueprint set. */
 	UPROPERTY(EditDefaultsOnly, Category = "Aim", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
@@ -139,5 +113,4 @@ private:
 	float DefaultFieldOfView = 0.0f;
 	float DefaultWalkSpeed = 0.0f;
 
-	FTimerHandle FireTimerHandle;
 };
