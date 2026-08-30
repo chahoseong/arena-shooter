@@ -10,8 +10,9 @@ class UAnimMontage;
 class UArenaShooterHealthComponent;
 
 /**
- * Melee enemy. Turns to face wherever it is heading, unlike the player, who keeps facing the
- * camera and strafes; the minion animations have no sideways or backward set to strafe with.
+ * Melee enemy. Turns to face wherever its controller is looking, unlike the player, who keeps
+ * facing the camera and strafes; the minion animations have no sideways or backward set to
+ * strafe with.
  *
  * Movement itself belongs to the AI controller and is not part of this class.
  *
@@ -25,6 +26,12 @@ class ARENASHOOTER_API AArenaShooterEnemyCharacter : public ACharacter
 public:
 	AArenaShooterEnemyCharacter();
 
+	/**
+	 * Where this enemy heads until something turns its attention to the player, in world space.
+	 * Equals the enemy's own position when no destination was set, which reads as standing still.
+	 */
+	FVector GetDestinationLocation() const { return GetActorTransform().TransformPosition(Destination); }
+
 protected:
 	virtual void BeginPlay() override;
 
@@ -36,6 +43,18 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UArenaShooterHealthComponent> Health;
+
+	/**
+	 * Set per placed enemy, so it lives on the pawn rather than the controller: controllers are
+	 * spawned, not placed, and there is nothing in the level to point at one. The pawn only
+	 * carries it; the controller reads it once and never asks again.
+	 *
+	 * MakeEditWidget puts a draggable handle in the viewport, so this can be placed by eye rather
+	 * than typed. That handle is in the enemy's own space, so turning the enemy swings its
+	 * destination with it.
+	 */
+	UPROPERTY(EditInstanceOnly, Category = "AI", meta = (MakeEditWidget, AllowPrivateAccess = "true"))
+	FVector Destination = FVector::ZeroVector;
 
 	/** Played once on death. Left unset here: the animation belongs to whichever mesh the Blueprint picks. */
 	UPROPERTY(EditDefaultsOnly, Category = "Death", meta = (AllowPrivateAccess = "true"))

@@ -15,9 +15,15 @@ AArenaShooterEnemyCharacter::AArenaShooterEnemyCharacter()
 	// reads the result on its own tick.
 	PrimaryActorTick.bCanEverTick = false;
 
-	// The body faces where it is going, so a single forward run set covers every direction.
+	// The body follows wherever the controller is looking, which is the path ahead while moving
+	// and the focus target once stopped. Orienting to movement instead would leave the body stuck
+	// facing its last direction of travel, because a standing character has no travel direction.
+	//
+	// FaceRotation is not used for this: it assigns the control rotation outright, so the body
+	// would snap around. Going through the movement component keeps it inside RotationRate.
 	bUseControllerRotationYaw = false;
-	GetCharacterMovement()->bOrientRotationToMovement = true;
+	GetCharacterMovement()->bOrientRotationToMovement = false;
+	GetCharacterMovement()->bUseControllerDesiredRotation = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.0f, 0.0f);
 
 	// Matches the running sample in the locomotion blend space, so the feet do not slide.
