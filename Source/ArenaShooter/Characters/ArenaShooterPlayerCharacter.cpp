@@ -17,7 +17,8 @@
 
 AArenaShooterPlayerCharacter::AArenaShooterPlayerCharacter()
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// Aim blends the camera, speed and field of view towards their targets every frame.
+	PrimaryActorTick.bCanEverTick = true;
 
 	// The body follows the camera's yaw, so movement input strafes instead of turning the body.
 	bUseControllerRotationYaw = true;
@@ -34,6 +35,43 @@ AArenaShooterPlayerCharacter::AArenaShooterPlayerCharacter()
 	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
 	FollowCamera->bUsePawnControlRotation = false;
+}
+
+void AArenaShooterPlayerCharacter::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// Remember what the Blueprint configured; these are the targets when not aiming.
+	DefaultArmLength = CameraBoom->TargetArmLength;
+	DefaultShoulderOffset = CameraBoom->SocketOffset.Y;
+	DefaultFieldOfView = FollowCamera->FieldOfView;
+	DefaultWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+}
+
+void AArenaShooterPlayerCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	const float TargetArmLength = bIsAiming ? AimArmLength : DefaultArmLength;
+	const float TargetShoulder = bIsAiming ? AimShoulderOffset : DefaultShoulderOffset;
+	const float TargetFieldOfView = bIsAiming ? AimFieldOfView : DefaultFieldOfView;
+	const float TargetWalkSpeed = bIsAiming ? AimWalkSpeed : DefaultWalkSpeed;
+
+	CameraBoom->TargetArmLength =
+		FMath::FInterpTo(CameraBoom->TargetArmLength, TargetArmLength, DeltaSeconds, AimBlendSpeed);
+	CameraBoom->SocketOffset.Y =
+		FMath::FInterpTo(CameraBoom->SocketOffset.Y, TargetShoulder, DeltaSeconds, AimBlendSpeed);
+	FollowCamera->SetFieldOfView(
+		FMath::FInterpTo(FollowCamera->FieldOfView, TargetFieldOfView, DeltaSeconds, AimBlendSpeed));
+
+	UCharacterMovementComponent* Movement = GetCharacterMovement();
+	Movement->MaxWalkSpeed =
+		FMath::FInterpTo(Movement->MaxWalkSpeed, TargetWalkSpeed, DeltaSeconds, AimBlendSpeed);
+
+	if (bDrawAimDebug)
+	{
+		DrawDebugSphere(GetWorld(), GetAimPoint(), 8.0f, 8, FColor::Cyan, false, -1.0f);
+	}
 }
 
 void AArenaShooterPlayerCharacter::NotifyControllerChanged()
@@ -86,6 +124,13 @@ void AArenaShooterPlayerCharacter::SetupPlayerInputComponent(UInputComponent* Pl
 		Input->BindAction(FireAction, ETriggerEvent::Completed, this, &AArenaShooterPlayerCharacter::StopFiring);
 		Input->BindAction(FireAction, ETriggerEvent::Canceled, this, &AArenaShooterPlayerCharacter::StopFiring);
 	}
+
+	if (AimAction)
+	{
+		Input->BindAction(AimAction, ETriggerEvent::Started, this, &AArenaShooterPlayerCharacter::StartAiming);
+		Input->BindAction(AimAction, ETriggerEvent::Completed, this, &AArenaShooterPlayerCharacter::StopAiming);
+		Input->BindAction(AimAction, ETriggerEvent::Canceled, this, &AArenaShooterPlayerCharacter::StopAiming);
+	}
 }
 
 void AArenaShooterPlayerCharacter::Move(const FInputActionValue& Value)
@@ -110,9 +155,12 @@ void AArenaShooterPlayerCharacter::Look(const FInputActionValue& Value)
 {
 	const FVector2D LookInput = Value.Get<FVector2D>();
 
+	// Aiming turns the view more slowly so distant targets can be lined up.
+	const float Scale = bIsAiming ? AimLookScale : 1.0f;
+
 	// Pitch inversion is handled by a Negate modifier on the input action.
-	AddControllerYawInput(LookInput.X);
-	AddControllerPitchInput(LookInput.Y);
+	AddControllerYawInput(LookInput.X * Scale);
+	AddControllerPitchInput(LookInput.Y * Scale);
 }
 
 void AArenaShooterPlayerCharacter::StartFiring()
@@ -127,6 +175,32 @@ void AArenaShooterPlayerCharacter::StartFiring()
 void AArenaShooterPlayerCharacter::StopFiring()
 {
 	GetWorldTimerManager().ClearTimer(FireTimerHandle);
+}
+
+void AArenaShooterPlayerCharacter::StartAiming()
+{
+	bIsAiming = true;
+}
+
+void AArenaShooterPlayerCharacter::StopAiming()
+{
+	bIsAiming = false;
+}
+
+FVector AArenaShooterPlayerCharacter::GetAimPoint() const
+{
+	const FVector CameraLocation = FollowCamera->GetComponentLocation();
+	const FVector CameraForward = FollowCamera->GetForwardVector();
+	// Reach past the muzzle's range by the boom length, so the muzzle's own range stays intact.
+	const FVector AimEnd = CameraLocation + CameraForward * (FireRange + CameraBoom->TargetArmLength);
+
+	FCollisionQueryParams Params;
+	Params.AddIgnoredActor(this);
+
+	FHitResult AimHit;
+	const bool bHit = GetWorld()->LineTraceSingleByChannel(
+		AimHit, CameraLocation, AimEnd, ArenaShooter_TraceChannel_Weapon, Params);
+	return bHit ? AimHit.ImpactPoint : AimEnd;
 }
 
 void AArenaShooterPlayerCharacter::Fire()
@@ -147,16 +221,9 @@ void AArenaShooterPlayerCharacter::Fire()
 	FCollisionQueryParams Params;
 	Params.AddIgnoredActor(this);
 
-	// Stage 1: find what the centre of the screen points at. The camera sits behind the character,
-	// so reach past the muzzle's range by the boom length to keep the muzzle's own range intact.
-	const FVector CameraLocation = FollowCamera->GetComponentLocation();
+	// Stage 1: what the centre of the screen points at. Shared with the aim marker.
 	const FVector CameraForward = FollowCamera->GetForwardVector();
-	const FVector AimEnd = CameraLocation + CameraForward * (FireRange + CameraBoom->TargetArmLength);
-
-	FHitResult AimHit;
-	const bool bAimHit = World->LineTraceSingleByChannel(
-		AimHit, CameraLocation, AimEnd, ArenaShooter_TraceChannel_Weapon, Params);
-	const FVector AimPoint = bAimHit ? AimHit.ImpactPoint : AimEnd;
+	const FVector AimPoint = GetAimPoint();
 
 	// Stage 2: the shot itself. Starting at the muzzle is what makes cover between the gun and the
 	// target stop the shot, which a camera-origin trace would see straight over.
