@@ -2,6 +2,7 @@
 
 #include "ArenaShooterPlayerCharacter.h"
 
+#include "Animation/AnimMontage.h"
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Combat/ArenaShooterAimComponent.h"
@@ -81,6 +82,14 @@ void AArenaShooterPlayerCharacter::HandleDeath()
 
 	// The body stays. Its collision stays too: the capsule is what finds the floor, and Game Flow
 	// needs something to put a defeat screen over.
+
+	// Holding the final pose is the montage's own doing: its auto blend out is off, so it keeps the
+	// last frame instead of letting the slot fall back to the locomotion pose and standing the body
+	// up. The enemy sidesteps this by removing itself at that moment, which the player cannot do.
+	if (DeathMontage)
+	{
+		PlayAnimMontage(DeathMontage);
+	}
 }
 
 void AArenaShooterPlayerCharacter::Tick(float DeltaSeconds)

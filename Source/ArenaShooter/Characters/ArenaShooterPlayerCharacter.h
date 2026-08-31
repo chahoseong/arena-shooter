@@ -9,6 +9,7 @@
 
 class UCameraComponent;
 class USpringArmComponent;
+class UAnimMontage;
 class UInputAction;
 class UArenaShooterAimComponent;
 class UArenaShooterHealthComponent;
@@ -90,6 +91,14 @@ private:
 	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Aim", meta = (AllowPrivateAccess = "true"))
 	bool bDrawAimDebug = true;
+
+	/**
+	 * Played once on death. Its slot has to be the full-body one, or the legs keep running the
+	 * locomotion pose underneath. Left unset here: the animation belongs to whichever mesh the
+	 * Blueprint picks.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UAnimMontage> DeathMontage;
 
 	/** Unaimed speed, captured on BeginPlay. Contributions are multiplied onto it. */
 	float BaseWalkSpeed = 0.0f;
