@@ -5,6 +5,7 @@
 #include "Camera/CameraComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Combat/ArenaShooterAimComponent.h"
+#include "Combat/ArenaShooterHealthComponent.h"
 #include "Combat/ArenaShooterWeaponComponent.h"
 #include "DrawDebugHelpers.h"
 #include "EnhancedInputComponent.h"
@@ -50,6 +51,7 @@ AArenaShooterPlayerCharacter::AArenaShooterPlayerCharacter()
 
 	Weapon = CreateDefaultSubobject<UArenaShooterWeaponComponent>(TEXT("Weapon"));
 	Aim = CreateDefaultSubobject<UArenaShooterAimComponent>(TEXT("Aim"));
+	Health = CreateDefaultSubobject<UArenaShooterHealthComponent>(TEXT("Health"));
 }
 
 void AArenaShooterPlayerCharacter::BeginPlay()
@@ -61,11 +63,40 @@ void AArenaShooterPlayerCharacter::BeginPlay()
 	Aim->SetCamera(FollowCamera);
 
 	BaseWalkSpeed = GetCharacterMovement()->MaxWalkSpeed;
+
+	Health->OnDeath.AddDynamic(this, &AArenaShooterPlayerCharacter::HandleDeath);
+}
+
+void AArenaShooterPlayerCharacter::HandleDeath()
+{
+	// Explicitly, even though Tick stops below and the weapon is only advanced from there. Wanting
+	// to fire is latched and released by the input binding alone, so nothing else here would clear
+	// it, and a later change to Tick should not be able to bring the shooting back.
+	Weapon->StopFiring();
+
+	GetCharacterMovement()->StopMovementImmediately();
+	GetCharacterMovement()->DisableMovement();
+
+	DisableInput(Cast<APlayerController>(GetController()));
+
+	// The body stays. Its collision stays too: the capsule is what finds the floor, and Game Flow
+	// needs something to put a defeat screen over.
 }
 
 void AArenaShooterPlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	// Everything below runs unconditionally and would carry on over a corpse: the camera would keep
+	// blending, the walk speed would be rewritten every frame, and the aim trace would keep looking
+	// for something to shoot. One gate covers them all, and covers whatever is added later.
+	//
+	// Reads correctly only because Tick runs after BeginPlay: health starts at zero and is filled in
+	// there, so IsDead() answers true before that.
+	if (Health->IsDead())
+	{
+		return;
+	}
 
 	Aim->Update(DeltaSeconds);
 

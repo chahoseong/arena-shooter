@@ -6,6 +6,9 @@
 #include "Components/ActorComponent.h"
 #include "ArenaShooterHealthComponent.generated.h"
 
+/** Stands in for a health display until UI / Feedback provides one. */
+DECLARE_LOG_CATEGORY_EXTERN(LogArenaShooterHealth, Log, All);
+
 /** Reports who dealt the damage, so a listener can turn on whoever shot it. */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FArenaShooterDamagedSignature, AActor*, DamageCauser);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FArenaShooterDeathSignature);
@@ -54,6 +57,25 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Health", meta = (ClampMin = "1.0"))
 	float MaxHealth = 100.0f;
 
+	/**
+	 * Grace after a hit lands, during which further hits do nothing at all. Zero by default, which
+	 * is what the enemy wants: it should die in as many shots as it takes, with none of them wasted.
+	 * Raised on whoever is being crowded, which today is only the player.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Health", meta = (ClampMin = "0.0"))
+	float InvulnerabilityDuration = 0.0f;
+
+	/**
+	 * Reports health changes to the log. Off by default so the enemy, which takes ten shots to kill,
+	 * stays quiet. Stands in for a health display until UI / Feedback provides one, and goes when it
+	 * does.
+	 */
+	UPROPERTY(EditDefaultsOnly, Category = "Health")
+	bool bLogHealthChanges = false;
+
 	/** Set from MaxHealth on BeginPlay so the Blueprint value is the one that counts. */
 	float Health = 0.0f;
+
+	/** When the last hit that counted landed. Stamped, so simultaneous hits collapse into one. */
+	double LastDamagedTime = -UE_BIG_NUMBER;
 };

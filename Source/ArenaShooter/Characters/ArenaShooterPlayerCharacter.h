@@ -11,6 +11,7 @@ class UCameraComponent;
 class USpringArmComponent;
 class UInputAction;
 class UArenaShooterAimComponent;
+class UArenaShooterHealthComponent;
 class UArenaShooterWeaponComponent;
 class UInputMappingContext;
 struct FInputActionValue;
@@ -37,6 +38,9 @@ protected:
 	virtual void SetupPlayerInputComponent(UInputComponent* PlayerInputComponent) override;
 
 private:
+	UFUNCTION()
+	void HandleDeath();
+
 	void Move(const FInputActionValue& Value);
 	void Look(const FInputActionValue& Value);
 
@@ -54,6 +58,9 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Aim", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UArenaShooterAimComponent> Aim;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Health", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UArenaShooterHealthComponent> Health;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Input", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UInputMappingContext> DefaultMappingContext;
