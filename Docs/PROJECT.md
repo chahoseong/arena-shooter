@@ -6,15 +6,14 @@
 
 ## Game Overview
 
-플레이어가 하나의 아레나에서 이동과 원거리 공격을 사용해 적과 전투하는 싱글플레이 3인칭 아레나 슈터다. 각 Wave에는 파괴해야 할 목표물이 있고, 적이 몰려와 이를 방해한다. 목표물을 파괴하면 다음 Wave로 진행하며, 마지막 Wave를 클리어하면 승리한다.
+플레이어가 하나의 아레나에서 이동과 원거리 공격을 사용해 적과 전투하는 싱글플레이 3인칭 아레나 슈터다. 플레이어는 아레나에 있는 기지를 지킨다. 적이 Wave 단위로 몰려와 기지를 노리고, 그 Wave의 적을 모두 처치하면 다음 Wave로 진행한다. 마지막 Wave를 클리어하면 승리하고, 기지가 파괴되거나 플레이어가 죽으면 패배한다.
 
 ## Core Loop
 
 ```text
 Move & Shoot
-→ Hold off Enemies
-→ Destroy the Objective
-→ Clear Wave
+→ Protect the Base
+→ Clear the Wave
 → Advance
 → Repeat
 ```
@@ -35,7 +34,7 @@ Move & Shoot
 
 - One melee enemy type
 - Detect and target the player
-- Move toward the player
+- Advance on the base
 - Basic melee attack
 - Health, hit, and death
 - Animation for movement, attack, and death
@@ -43,18 +42,19 @@ Move & Shoot
 ### Game Flow
 
 - Three waves
-- An objective to destroy in each wave
+- A base the player defends
 - Spawn enemies for each wave
-- Advance to the next wave when the objective is destroyed
+- Advance to the next wave when its enemies are defeated
 - Victory after clearing Wave 3
-- Defeat when the player dies
+- Defeat when the player dies or the base is destroyed
 - Restart after Victory or Defeat
 
 ### UI / Feedback
 
 - Crosshair
 - Player health
-- Objective health
+- Base health
+- Remaining enemies
 - Current wave
 - Victory / Defeat state
 - Restart prompt
