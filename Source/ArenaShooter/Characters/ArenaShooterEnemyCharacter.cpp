@@ -85,5 +85,15 @@ void AArenaShooterEnemyCharacter::HandleDeath()
 
 void AArenaShooterEnemyCharacter::RemoveBody()
 {
+	// The mind goes with the body. Unpossessing on its own leaves the controller in the world with a
+	// live perception component, still running sight queries from where its pawn fell, and waves
+	// would pile up one of those per kill.
+	//
+	// Done here rather than from OnUnPossess, which AController::UnPossess keeps using afterwards.
+	if (AController* MyController = GetController())
+	{
+		MyController->Destroy();
+	}
+
 	Destroy();
 }

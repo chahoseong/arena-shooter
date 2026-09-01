@@ -62,20 +62,10 @@ void AArenaShooterEnemyController::OnPossess(APawn* InPawn)
 		Health->OnDeath.AddDynamic(this, &AArenaShooterEnemyController::HandleDeath);
 	}
 
-	if (BehaviorTree == nullptr || !RunBehaviorTree(BehaviorTree))
+	if (BehaviorTree)
 	{
-		return;
+		RunBehaviorTree(BehaviorTree);
 	}
-
-	// Blackboard is AAIController's own member, set up by RunBehaviorTree just above.
-	if (Blackboard == nullptr)
-	{
-		return;
-	}
-
-	// Read once. It is a rally point, not something to follow, so the blackboard holds the place
-	// rather than anything that could move.
-	Blackboard->SetValueAsVector(DestinationKey, Enemy->GetDestinationLocation());
 }
 
 void AArenaShooterEnemyController::HandleTargetPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus)

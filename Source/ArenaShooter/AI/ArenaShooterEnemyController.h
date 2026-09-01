@@ -46,12 +46,9 @@ private:
 	TObjectPtr<UBehaviorTree> BehaviorTree;
 
 	/**
-	 * Names of the blackboard entries this controller writes. They are the contract with a
-	 * hand-authored asset, and a mismatch is silent: the tree simply never gets a value.
+	 * Name of the blackboard entry this controller writes. It is the contract with a hand-authored
+	 * asset, and a mismatch is silent: the tree simply never gets a value.
 	 */
 	UPROPERTY(EditDefaultsOnly, Category = "AI")
 	FName TargetActorKey = TEXT("TargetActor");
-
-	UPROPERTY(EditDefaultsOnly, Category = "AI")
-	FName DestinationKey = TEXT("Destination");
 };
