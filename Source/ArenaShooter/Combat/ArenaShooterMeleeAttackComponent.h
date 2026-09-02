@@ -56,10 +56,7 @@ public:
 	 */
 	float GetReachTo(const AActor& Target) const;
 
-	/**
-	 * How far an actor's body reaches out sideways from its origin. Public because where an enemy
-	 * stops is derived from the same measurement the swing is judged by.
-	 */
+	/** How far an actor's body reaches out sideways from its origin. */
 	static float GetPlanarRadius(const AActor& Actor);
 
 	/** Decides the swing where it stands: reach, angle, and the evidence that it happened. */

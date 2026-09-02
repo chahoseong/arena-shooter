@@ -242,15 +242,5 @@ void AArenaShooterEnemyController::WriteApproachRadius(const AActor* Target)
 	// on looking correct after AttackRange was retuned, and enemies would close to the wrong
 	// distance with nothing on screen to say why.
 	const float Reach = Melee->GetReachTo(*Target);
-	const float ApproachRadius = FMath::Max(0.0f, Reach - ApproachMargin);
-	Blackboard->SetValueAsFloat(ApproachRadiusKey, ApproachRadius);
-
-	// Spelled out because every one of these has been wrong at least once, and none of them is
-	// visible from the tree or from the level.
-	UE_LOG(LogArenaShooterAI, Log,
-		TEXT("%s: reach to %s = %.0f (bodies %.0f + %.0f), approaching to %.0f"),
-		*GetName(), *Target->GetName(), Reach,
-		UArenaShooterMeleeAttackComponent::GetPlanarRadius(*GetPawn()),
-		UArenaShooterMeleeAttackComponent::GetPlanarRadius(*Target),
-		ApproachRadius);
+	Blackboard->SetValueAsFloat(ApproachRadiusKey, FMath::Max(0.0f, Reach - ApproachMargin));
 }
