@@ -32,9 +32,6 @@ public:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual bool ShouldTickIfViewportsOnly() const override { return true; }
 
-protected:
-	virtual void BeginPlay() override;
-
 private:
 	/**
 	 * An actor with no root component cannot hold a position: the transform is dropped and every
@@ -48,14 +45,4 @@ private:
 	UPROPERTY(EditAnywhere, Category = "Spawning", meta = (ClampMin = "0.0"))
 	float Radius = 500.0f;
 
-	/**
-	 * Scaffolding for the period before anything asks. The wave sequence becomes the caller, and
-	 * when it does these two go back to nothing: a point that spawns on its own would be a second
-	 * source of enemies nobody is counting.
-	 */
-	UPROPERTY(EditAnywhere, Category = "Spawning|Debug")
-	TSubclassOf<AArenaShooterEnemyCharacter> DebugEnemyClass;
-
-	UPROPERTY(EditAnywhere, Category = "Spawning|Debug", meta = (ClampMin = "0"))
-	int32 SpawnOnBeginPlay = 0;
 };

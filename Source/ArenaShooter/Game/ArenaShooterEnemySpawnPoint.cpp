@@ -19,16 +19,6 @@ AArenaShooterEnemySpawnPoint::AArenaShooterEnemySpawnPoint()
 	PrimaryActorTick.bCanEverTick = true;
 }
 
-void AArenaShooterEnemySpawnPoint::BeginPlay()
-{
-	Super::BeginPlay();
-
-	for (int32 Index = 0; Index < SpawnOnBeginPlay; ++Index)
-	{
-		SpawnEnemy(DebugEnemyClass);
-	}
-}
-
 AArenaShooterEnemyCharacter* AArenaShooterEnemySpawnPoint::SpawnEnemy(
 	TSubclassOf<AArenaShooterEnemyCharacter> EnemyClass)
 {
