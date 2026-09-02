@@ -4,6 +4,7 @@
 
 #include "Animation/AnimInstance.h"
 #include "Animation/AnimMontage.h"
+#include "Components/PrimitiveComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "DrawDebugHelpers.h"
 #include "Engine/World.h"
@@ -18,20 +19,50 @@ UArenaShooterMeleeAttackComponent::UArenaShooterMeleeAttackComponent()
 
 bool UArenaShooterMeleeAttackComponent::CanAttack(const AActor* Target) const
 {
-	const AActor* Owner = GetOwner();
-	const UWorld* World = GetWorld();
-	if (Target == nullptr || Owner == nullptr || World == nullptr)
-	{
-		return false;
-	}
+	return IsInReach(Target) && IsReady();
+}
 
-	if (World->GetTimeSeconds() - LastAttackStartTime < AttackInterval)
+bool UArenaShooterMeleeAttackComponent::IsInReach(const AActor* Target) const
+{
+	const AActor* Owner = GetOwner();
+	if (Target == nullptr || Owner == nullptr)
 	{
 		return false;
 	}
 
 	const FVector ToTarget = Target->GetActorLocation() - Owner->GetActorLocation();
-	return ToTarget.Size2D() <= AttackRange;
+	return ToTarget.Size2D() <= GetReachTo(*Target);
+}
+
+bool UArenaShooterMeleeAttackComponent::IsReady() const
+{
+	const UWorld* World = GetWorld();
+	return World != nullptr && World->GetTimeSeconds() - LastAttackStartTime >= AttackInterval;
+}
+
+float UArenaShooterMeleeAttackComponent::GetReachTo(const AActor& Target) const
+{
+	// Both bodies come out of the measurement, because AttackRange is the gap between them and the
+	// distance it gets compared against is between their origins. Leaving either radius in makes
+	// the same number mean a different fight depending on how wide the two happen to be -- which is
+	// what the base, several times a character's girth, made impossible to ignore.
+	const AActor* Owner = GetOwner();
+	return AttackRange + (Owner ? GetPlanarRadius(*Owner) : 0.0f) + GetPlanarRadius(Target);
+}
+
+float UArenaShooterMeleeAttackComponent::GetPlanarRadius(const AActor& Actor)
+{
+	// Width in the plane, not AActor::GetSimpleCollisionRadius: that one comes back through
+	// CalcBoundingCylinder with height folded in, which reads a tall base as far wider than it
+	// stands and a character as twice its own girth. The swing is judged flat, so the only
+	// question is how far the body goes out sideways.
+	if (const UPrimitiveComponent* Root = Cast<UPrimitiveComponent>(Actor.GetRootComponent()))
+	{
+		const FVector Extent = Root->Bounds.BoxExtent;
+		return FMath::Max(Extent.X, Extent.Y);
+	}
+
+	return 0.0f;
 }
 
 bool UArenaShooterMeleeAttackComponent::StartAttack(AActor* Target)
@@ -114,7 +145,9 @@ void UArenaShooterMeleeAttackComponent::ResolveHit()
 	const FVector ToTarget = AttackTarget->GetActorLocation() - Origin;
 	const FVector Direction = ToTarget.GetSafeNormal2D();
 
-	const bool bInRange = ToTarget.Size2D() <= AttackRange;
+	const float Reach = GetReachTo(*AttackTarget);
+
+	const bool bInRange = ToTarget.Size2D() <= Reach;
 	const bool bInAngle = FVector::DotProduct(Forward, Direction)
 		>= FMath::Cos(FMath::DegreesToRadians(AttackAngle));
 	const bool bHit = bInRange && bInAngle;
@@ -130,7 +163,7 @@ void UArenaShooterMeleeAttackComponent::ResolveHit()
 		const float Angle = FMath::DegreesToRadians(AttackAngle);
 
 		// The arc as it was tested, opening along the facing the swing committed to.
-		DrawDebugCone(World, Origin, Forward, AttackRange, Angle, Angle, 16, Verdict, false, 2.0f);
+		DrawDebugCone(World, Origin, Forward, Reach, Angle, Angle, 16, Verdict, false, 2.0f);
 
 		// Where the target stood when the swing was decided. On a miss this is the whole story:
 		// a line outside the arc means it stepped aside, one past the tip means it backed off.

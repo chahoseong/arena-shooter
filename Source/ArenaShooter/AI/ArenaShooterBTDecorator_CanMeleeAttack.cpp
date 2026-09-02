@@ -13,13 +13,17 @@ UArenaShooterBTDecorator_CanMeleeAttack::UArenaShooterBTDecorator_CanMeleeAttack
 
 	INIT_DECORATOR_NODE_NOTIFY_FLAGS();
 
-	// The key only says who to measure against; the answer turns on a distance and a cooldown, and
-	// neither of those raises an event. There is nothing to abort on, so the Selector re-asking on
-	// its way back round to the top is the whole mechanism.
-	bAllowAbortLowerPri = false;
+	// A distance raises no event, so the condition is polled and the tree asked to reconsider only
+	// when the answer changes -- the same shape UBTDecorator_ConeCheck uses.
+	//
+	// Lower priority alone: coming within reach has to interrupt the approach running below, but
+	// leaving it does not need an abort of its own, because the attack task gives the branch up as
+	// soon as the target is out of reach. Adding Self would put a second way to restart this branch
+	// next to that one, and two of them fighting is what makes a tree flicker.
+	bAllowAbortLowerPri = true;
 	bAllowAbortChildNodes = false;
 	bAllowAbortNone = false;
-	FlowAbortMode = EBTFlowAbortMode::None;
+	FlowAbortMode = EBTFlowAbortMode::LowerPriority;
 
 	BlackboardKey.AddObjectFilter(
 		this, GET_MEMBER_NAME_CHECKED(UArenaShooterBTDecorator_CanMeleeAttack, BlackboardKey), AActor::StaticClass());
@@ -46,7 +50,37 @@ bool UArenaShooterBTDecorator_CanMeleeAttack::CalculateRawConditionValue(
 	// A null target is a legitimate answer of "no", not a mistake: this decorator is also what
 	// keeps the attack branch shut before anything has been noticed.
 	const AActor* Target = Cast<AActor>(Blackboard->GetValueAsObject(BlackboardKey.SelectedKeyName));
-	return Melee->CanAttack(Target);
+	return Melee->IsInReach(Target);
+}
+
+void UArenaShooterBTDecorator_CanMeleeAttack::InitializeMemory(
+	UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTMemoryInit::Type InitType) const
+{
+	FArenaShooterCanMeleeAttackMemory* Memory = CastInstanceNodeMemory<FArenaShooterCanMeleeAttackMemory>(NodeMemory);
+	Memory->bLastResult = false;
+}
+
+void UArenaShooterBTDecorator_CanMeleeAttack::OnBecomeRelevant(
+	UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
+{
+	// Seeded from the condition as it stands, not from false. Starting out disagreeing with reality
+	// makes the first tick report a change that never happened, and that spurious change asks the
+	// tree to reconsider -- once every time this becomes relevant, which is once per swing.
+	FArenaShooterCanMeleeAttackMemory* Memory = CastInstanceNodeMemory<FArenaShooterCanMeleeAttackMemory>(NodeMemory);
+	Memory->bLastResult = CalculateRawConditionValue(OwnerComp, NodeMemory);
+}
+
+void UArenaShooterBTDecorator_CanMeleeAttack::TickNode(
+	UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
+{
+	FArenaShooterCanMeleeAttackMemory* Memory = CastInstanceNodeMemory<FArenaShooterCanMeleeAttackMemory>(NodeMemory);
+
+	const bool bResult = CalculateRawConditionValue(OwnerComp, NodeMemory);
+	if (bResult != Memory->bLastResult)
+	{
+		Memory->bLastResult = bResult;
+		OwnerComp.RequestExecution(this);
+	}
 }
 
 FString UArenaShooterBTDecorator_CanMeleeAttack::GetStaticDescription() const

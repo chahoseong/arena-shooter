@@ -33,10 +33,34 @@ public:
 	 */
 	bool CanAttack(const AActor* Target) const;
 
+	/**
+	 * Whether Target is close enough to swing at, whether or not a swing is due yet.
+	 *
+	 * Separate from the cadence because they answer different questions and are asked by different
+	 * things: this one decides where the approach ends, and holds true through the wait between
+	 * swings. Folding the cadence in would let the enemy resume closing every time one finished.
+	 */
+	bool IsInReach(const AActor* Target) const;
+
+	/** Whether enough time has passed since the last swing for another to start. */
+	bool IsReady() const;
+
 	/** Begins a swing at Target. False when there is nothing to swing at. */
 	bool StartAttack(AActor* Target);
 
 	bool IsAttacking() const { return bIsAttacking; }
+
+	/**
+	 * How far away from Target's centre a swing at it can still land. The approach distance is
+	 * derived from this, so that where an enemy stops and where it can reach cannot drift apart.
+	 */
+	float GetReachTo(const AActor& Target) const;
+
+	/**
+	 * How far an actor's body reaches out sideways from its origin. Public because where an enemy
+	 * stops is derived from the same measurement the swing is judged by.
+	 */
+	static float GetPlanarRadius(const AActor& Actor);
 
 	/** Decides the swing where it stands: reach, angle, and the evidence that it happened. */
 	void ResolveHit();
@@ -51,9 +75,13 @@ public:
 	void CancelAttack();
 
 private:
-	/** How far the swing reaches, measured to the target's origin rather than to its collision. */
+	/**
+	 * The gap the swing can cross: from this enemy's own body to the target's, not between their
+	 * origins. Both radii are taken out of the measurement, so the number means the same thing
+	 * against a player as against something as wide as the base.
+	 */
 	UPROPERTY(EditDefaultsOnly, Category = "Melee", meta = (ClampMin = "0.0"))
-	float AttackRange = 200.0f;
+	float AttackRange = 125.0f;
 
 	/** Half-angle of the arc in front of the enemy. This is what stepping aside escapes. */
 	UPROPERTY(EditDefaultsOnly, Category = "Melee", meta = (ClampMin = "0.0", ClampMax = "180.0"))

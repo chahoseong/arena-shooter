@@ -31,8 +31,35 @@ EBTNodeResult::Type UArenaShooterBTTask_MeleeAttack::ExecuteTask(UBehaviorTreeCo
 		return EBTNodeResult::Failed;
 	}
 	
+	FArenaShooterMeleeAttackMemory* Memory = CastInstanceNodeMemory<FArenaShooterMeleeAttackMemory>(NodeMemory);
+	Memory->bSwingStarted = false;
+
 	AActor* Target = Cast<AActor>(Blackboard->GetValueAsObject(BlackboardKey.SelectedKeyName));
-	return Melee->StartAttack(Target) ? EBTNodeResult::InProgress : EBTNodeResult::Failed;
+	if (!Melee->IsInReach(Target))
+	{
+		return EBTNodeResult::Failed;
+	}
+
+	// Holding rather than swinging straight away when the cadence is still owed. The tick below
+	// starts it the moment it is due, and until then the enemy stands where it is.
+	if (Melee->IsReady())
+	{
+		if (!Melee->StartAttack(Target))
+		{
+			return EBTNodeResult::Failed;
+		}
+
+		Memory->bSwingStarted = true;
+	}
+
+	return EBTNodeResult::InProgress;
+}
+
+void UArenaShooterBTTask_MeleeAttack::InitializeMemory(
+	UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, EBTMemoryInit::Type InitType) const
+{
+	FArenaShooterMeleeAttackMemory* Memory = CastInstanceNodeMemory<FArenaShooterMeleeAttackMemory>(NodeMemory);
+	Memory->bSwingStarted = false;
 }
 
 void UArenaShooterBTTask_MeleeAttack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
@@ -55,9 +82,39 @@ void UArenaShooterBTTask_MeleeAttack::TickTask(UBehaviorTreeComponent& OwnerComp
 		return;
 	}
 	
-	if (!Melee->IsAttacking())
+	FArenaShooterMeleeAttackMemory* Memory = CastInstanceNodeMemory<FArenaShooterMeleeAttackMemory>(NodeMemory);
+
+	// A swing in flight is simply waited out, as before: the tree is what the attack reports back to.
+	if (Memory->bSwingStarted)
 	{
-		FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+		if (!Melee->IsAttacking())
+		{
+			FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
+		}
+
+		return;
+	}
+
+	// Otherwise the cadence is still owed. Give up only if the target has gone or moved out of
+	// reach, which is also what lets a target swapped mid-wait be picked up.
+	const UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
+	AActor* Target = Blackboard ? Cast<AActor>(Blackboard->GetValueAsObject(BlackboardKey.SelectedKeyName)) : nullptr;
+	if (!Melee->IsInReach(Target))
+	{
+		FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+		return;
+	}
+
+	if (Melee->IsReady())
+	{
+		if (Melee->StartAttack(Target))
+		{
+			Memory->bSwingStarted = true;
+		}
+		else
+		{
+			FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
+		}
 	}
 }
 
