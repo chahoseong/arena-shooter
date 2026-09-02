@@ -31,9 +31,14 @@ class ARENASHOOTER_API UArenaShooterWaveComponent : public UActorComponent
 public:
 	UArenaShooterWaveComponent();
 
-	/** Begins a wave of EnemyCount enemies. Does nothing if one is already running. */
+	/**
+	 * Begins a wave of EnemyCount enemies of InEnemyClass. Does nothing if one is already running.
+	 *
+	 * Both come in from outside, because what a wave is made of and how big it is are the same kind
+	 * of decision, and neither belongs to a component that only knows how to send one out.
+	 */
 	UFUNCTION(BlueprintCallable, Category = "Wave")
-	void StartWave(int32 EnemyCount);
+	void StartWave(int32 EnemyCount, TSubclassOf<AArenaShooterEnemyCharacter> InEnemyClass);
 
 	UPROPERTY(BlueprintAssignable, Category = "Wave")
 	FArenaShooterWaveClearedSignature OnWaveCleared;
@@ -55,19 +60,13 @@ private:
 	/** Ends the wave once nothing is left to come out and nothing that came out is still alive. */
 	void CheckCleared();
 
-	UPROPERTY(EditDefaultsOnly, Category = "Wave")
+	/** What this wave is sending out. Given at the start and kept for the ones still to come. */
+	UPROPERTY(Transient)
 	TSubclassOf<AArenaShooterEnemyCharacter> EnemyClass;
 
 	/** Seconds between one enemy coming out and the next. */
 	UPROPERTY(EditDefaultsOnly, Category = "Wave", meta = (ClampMin = "0.0"))
 	float SpawnInterval = 1.0f;
-
-	/**
-	 * Scaffolding for the period before anything starts a wave. Whatever runs the match becomes the
-	 * caller, and when it does this goes back to nothing.
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Wave|Debug", meta = (ClampMin = "0"))
-	int32 StartOnBeginPlayCount = 0;
 
 	/** Gathered on BeginPlay: the game mode is not in the level and cannot be handed level actors. */
 	UPROPERTY(Transient)

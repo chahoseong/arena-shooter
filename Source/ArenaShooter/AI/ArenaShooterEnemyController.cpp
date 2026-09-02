@@ -134,10 +134,19 @@ void AArenaShooterEnemyController::HandleDeath()
 {
 	// The pawn outlives this moment by the length of the death montage. Without this the tree
 	// keeps running over the corpse and turns it to face the player.
+	StopBehaviour();
+}
+
+void AArenaShooterEnemyController::StopBehaviour()
+{
 	if (BrainComponent)
 	{
-		BrainComponent->StopLogic(TEXT("Died"));
+		BrainComponent->StopLogic(TEXT("Stopped"));
 	}
+
+	// The tree is what asked for the move, but the move outlives it: stopping the logic alone leaves
+	// the pawn coasting to wherever it was already heading.
+	StopMovement();
 }
 
 void AArenaShooterEnemyController::HandleBaseDestroyed(AActor* DestroyedActor)

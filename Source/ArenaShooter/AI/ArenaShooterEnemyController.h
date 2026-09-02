@@ -32,6 +32,12 @@ class ARENASHOOTER_API AArenaShooterEnemyController : public AAIController
 public:
 	AArenaShooterEnemyController();
 
+	/**
+	 * Puts the mind down and leaves the body where it stands. Death does this so a corpse stops
+	 * turning to face the player, and a finished match does it so the arena stops moving.
+	 */
+	void StopBehaviour();
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;

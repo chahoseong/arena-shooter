@@ -25,7 +25,10 @@ bool UArenaShooterMeleeAttackComponent::CanAttack(const AActor* Target) const
 bool UArenaShooterMeleeAttackComponent::IsInReach(const AActor* Target) const
 {
 	const AActor* Owner = GetOwner();
-	if (Target == nullptr || Owner == nullptr)
+
+	// IsValid, not a null check. A destroyed actor leaves this pointer standing until garbage
+	// collection gets to it, and asking a torn-down actor where it is reads freed memory.
+	if (!IsValid(Target) || Owner == nullptr)
 	{
 		return false;
 	}
@@ -69,7 +72,7 @@ bool UArenaShooterMeleeAttackComponent::StartAttack(AActor* Target)
 {
 	UWorld* World = GetWorld();
 	ACharacter* Owner = GetOwner<ACharacter>();
-	if (Target == nullptr || World == nullptr || Owner == nullptr || AttackMontage == nullptr)
+	if (!IsValid(Target) || World == nullptr || Owner == nullptr || AttackMontage == nullptr)
 	{
 		return false;
 	}
@@ -131,7 +134,10 @@ void UArenaShooterMeleeAttackComponent::ResolveHit()
 
 	UWorld* World = GetWorld();
 	AActor* Owner = GetOwner();
-	if (World == nullptr || Owner == nullptr || AttackTarget == nullptr)
+	// The swing outlives what it was aimed at. A base shot down mid-swing, or an enemy removed while
+	// one was in flight, is destroyed but still pointed at from here until garbage collection runs,
+	// so the question is whether it is still valid rather than whether it is still set.
+	if (World == nullptr || Owner == nullptr || !IsValid(AttackTarget))
 	{
 		return;
 	}
@@ -141,8 +147,13 @@ void UArenaShooterMeleeAttackComponent::ResolveHit()
 	// Taken from the actor, not the mesh: the mesh carries a yaw offset to face its model forwards.
 	const FVector Forward = Owner->GetActorForwardVector();
 
+	// Read once and kept, because the swing can be the end of what it hits: applying damage below
+	// runs the target's death inline, and a base that dies there is destroyed before this function
+	// returns. Everything after that point works from the numbers, not from the actor.
+	const FVector TargetLocation = AttackTarget->GetActorLocation();
+
 	// Flat, because the arc is about stepping aside rather than about height.
-	const FVector ToTarget = AttackTarget->GetActorLocation() - Origin;
+	const FVector ToTarget = TargetLocation - Origin;
 	const FVector Direction = ToTarget.GetSafeNormal2D();
 
 	const float Reach = GetReachTo(*AttackTarget);
@@ -167,7 +178,7 @@ void UArenaShooterMeleeAttackComponent::ResolveHit()
 
 		// Where the target stood when the swing was decided. On a miss this is the whole story:
 		// a line outside the arc means it stepped aside, one past the tip means it backed off.
-		DrawDebugLine(World, Origin, AttackTarget->GetActorLocation(), Verdict, false, 2.0f, 0, 2.0f);
+		DrawDebugLine(World, Origin, TargetLocation, Verdict, false, 2.0f, 0, 2.0f);
 	}
 }
 

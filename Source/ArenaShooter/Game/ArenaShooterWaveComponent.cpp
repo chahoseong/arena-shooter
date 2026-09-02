@@ -36,13 +36,9 @@ void UArenaShooterWaveComponent::BeginPlay()
 			TEXT("No spawn points in the level; waves will start and clear without anything coming out."));
 	}
 
-	if (StartOnBeginPlayCount > 0)
-	{
-		StartWave(StartOnBeginPlayCount);
-	}
 }
 
-void UArenaShooterWaveComponent::StartWave(int32 EnemyCount)
+void UArenaShooterWaveComponent::StartWave(int32 EnemyCount, TSubclassOf<AArenaShooterEnemyCharacter> InEnemyClass)
 {
 	if (PendingCount > 0 || AliveCount > 0)
 	{
@@ -57,6 +53,7 @@ void UArenaShooterWaveComponent::StartWave(int32 EnemyCount)
 
 	PendingCount = FMath::Max(0, EnemyCount);
 	AliveCount = 0;
+	EnemyClass = InEnemyClass;
 
 	if (PendingCount == 0)
 	{
