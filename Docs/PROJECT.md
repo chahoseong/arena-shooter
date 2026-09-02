@@ -54,11 +54,13 @@ Move & Shoot
 - Crosshair
 - Player health
 - Base health
+- Enemy health
 - Remaining enemies
 - Current wave
 - Victory / Defeat state
 - Restart prompt
 - Basic feedback for attacks, hits, and deaths
+- Damage numbers
 
 ## Non Goals
 
