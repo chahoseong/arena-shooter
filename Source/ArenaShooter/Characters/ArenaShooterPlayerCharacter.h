@@ -85,14 +85,6 @@ private:
 	TObjectPtr<UInputAction> AimAction;
 
 	/**
-	 * Draws a marker on whatever the centre of the screen points at. Verification instrumentation
-	 * rather than presentation: without a reference point there is no way to judge whether the
-	 * character covers the aim point. Remove it once UI / Feedback provides a real crosshair.
-	 */
-	UPROPERTY(EditDefaultsOnly, Category = "Aim", meta = (AllowPrivateAccess = "true"))
-	bool bDrawAimDebug = true;
-
-	/**
 	 * Played once on death. Its slot has to be the full-body one, or the legs keep running the
 	 * locomotion pose underneath. Left unset here: the animation belongs to whichever mesh the
 	 * Blueprint picks.

@@ -5,8 +5,6 @@
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 
-DEFINE_LOG_CATEGORY(LogArenaShooterHealth);
-
 UArenaShooterHealthComponent::UArenaShooterHealthComponent()
 {
 	// Nothing to advance per frame; health only changes when damage arrives.
@@ -48,21 +46,10 @@ void UArenaShooterHealthComponent::HandleTakeAnyDamage(AActor* DamagedActor, flo
 
 	Health = FMath::Max(Health - Damage, 0.0f);
 
-	if (bLogHealthChanges)
-	{
-		UE_LOG(LogArenaShooterHealth, Log, TEXT("%s took %.0f from %s, %.0f/%.0f left"),
-			*GetNameSafe(GetOwner()), Damage, *GetNameSafe(DamageCauser), Health, MaxHealth);
-	}
-
 	OnDamaged.Broadcast(DamageCauser);
 
 	if (IsDead())
 	{
-		if (bLogHealthChanges)
-		{
-			UE_LOG(LogArenaShooterHealth, Log, TEXT("%s died"), *GetNameSafe(GetOwner()));
-		}
-
 		OnDeath.Broadcast();
 	}
 }

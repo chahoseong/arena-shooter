@@ -43,9 +43,13 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Wave")
 	FArenaShooterWaveClearedSignature OnWaveCleared;
 
-	/** Enemies that have been spawned and are still alive. Excludes any still waiting to come out. */
+	/**
+	 * Enemies this wave still has to lose before it is cleared: those alive, and those yet to come
+	 * out. Counted from what was asked for, less any spawn that failed, so it starts at the wave's
+	 * size and only ever comes down.
+	 */
 	UFUNCTION(BlueprintPure, Category = "Wave")
-	int32 GetRemainingCount() const { return AliveCount; }
+	int32 GetRemainingCount() const { return AliveCount + PendingCount; }
 
 protected:
 	virtual void BeginPlay() override;

@@ -8,7 +8,6 @@
 #include "Combat/ArenaShooterAimComponent.h"
 #include "Combat/ArenaShooterHealthComponent.h"
 #include "Combat/ArenaShooterWeaponComponent.h"
-#include "DrawDebugHelpers.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "Engine/World.h"
@@ -113,15 +112,7 @@ void AArenaShooterPlayerCharacter::Tick(float DeltaSeconds)
 	// so a later contributor such as a dash has somewhere to be combined in.
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed * Aim->GetSpeedMultiplier();
 
-	// Resolved once and shared: the marker shows exactly what a shot would be aimed at.
-	const FArenaShooterAimTarget AimTarget = GetAimTarget();
-
-	if (bDrawAimDebug)
-	{
-		DrawDebugSphere(GetWorld(), AimTarget.Point, 8.0f, 8, FColor::Cyan, false, -1.0f);
-	}
-
-	Weapon->Update(DeltaSeconds, AimTarget);
+	Weapon->Update(DeltaSeconds, GetAimTarget());
 }
 
 void AArenaShooterPlayerCharacter::NotifyControllerChanged()

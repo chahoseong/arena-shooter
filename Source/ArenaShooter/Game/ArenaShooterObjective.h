@@ -36,6 +36,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Objective")
 	FArenaShooterObjectiveDestroyedSignature OnObjectiveDestroyed;
 
+	/** How much of the base is left, for whatever wants to show it. */
+	UFUNCTION(BlueprintPure, Category = "Objective")
+	UArenaShooterHealthComponent* GetHealthComponent() const { return Health; }
+
 protected:
 	virtual void BeginPlay() override;
 

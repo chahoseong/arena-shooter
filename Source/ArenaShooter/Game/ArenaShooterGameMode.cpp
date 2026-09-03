@@ -86,6 +86,31 @@ void AArenaShooterGameMode::HandleStartingNewPlayer_Implementation(APlayerContro
 	Health->OnDeath.AddUniqueDynamic(this, &AArenaShooterGameMode::HandlePlayerDeath);
 }
 
+int32 AArenaShooterGameMode::GetWaveCount() const
+{
+	return MatchData ? MatchData->WaveEnemyCounts.Num() : 0;
+}
+
+int32 AArenaShooterGameMode::GetRemainingEnemyCount() const
+{
+	return Wave ? Wave->GetRemainingCount() : 0;
+}
+
+float AArenaShooterGameMode::GetSecondsUntilNextWave() const
+{
+	// The timer alone cannot answer this. It is also what carries the match to its win after the last
+	// wave, and it can outlive a match that ended some other way if a later change forgets to clear
+	// it. So the timer only counts when there is a wave for it to be counting to.
+	if (State != EArenaShooterMatchState::InProgress || MatchData == nullptr
+		|| !MatchData->WaveEnemyCounts.IsValidIndex(CurrentWaveIndex + 1))
+	{
+		return -1.0f;
+	}
+
+	// Negative on its own when the handle is not active, which is what a wave in progress looks like.
+	return GetWorldTimerManager().GetTimerRemaining(NextWaveTimer);
+}
+
 void AArenaShooterGameMode::StartNextWave()
 {
 	if (State != EArenaShooterMatchState::InProgress || MatchData == nullptr || Wave == nullptr)
@@ -107,6 +132,8 @@ void AArenaShooterGameMode::StartNextWave()
 		CurrentWaveIndex + 1, MatchData->WaveEnemyCounts.Num(), EnemyCount);
 
 	Wave->StartWave(EnemyCount, MatchData->EnemyClass);
+
+	OnWaveStarted.Broadcast(GetCurrentWaveNumber());
 }
 
 void AArenaShooterGameMode::HandleWaveCleared()

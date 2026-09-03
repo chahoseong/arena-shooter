@@ -12,6 +12,9 @@ class UArenaShooterWaveComponent;
 
 ARENASHOOTER_API DECLARE_LOG_CATEGORY_EXTERN(LogArenaShooterMatch, Log, All);
 
+/** Carries the wave's number counted from 1, so a listener can name it without asking back. */
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FArenaShooterWaveStartedSignature, int32, WaveNumber);
+
 UENUM()
 enum class EArenaShooterMatchState : uint8
 {
@@ -37,6 +40,14 @@ public:
 	AArenaShooterGameMode();
 
 	/**
+	 * Fires as each wave begins, after its first enemy has been sent for. A moment rather than a
+	 * value: what an announcement listens for, since polling the wave number would only ever show
+	 * that it had changed at some point.
+	 */
+	UPROPERTY(BlueprintAssignable, Category = "Match")
+	FArenaShooterWaveStartedSignature OnWaveStarted;
+
+	/**
 	 * Whether the match has stopped, either way. What the restart input asks before doing anything.
 	 *
 	 * The engine already has this question and means the same thing by it, so this answers it rather
@@ -44,6 +55,34 @@ public:
 	 * has nothing to say without replication to carry it.
 	 */
 	virtual bool HasMatchEnded() const override { return State != EArenaShooterMatchState::InProgress; }
+
+	/** Which wave is running, counted from 1 the way a player counts. Zero until the first one starts. */
+	UFUNCTION(BlueprintPure, Category = "Match")
+	int32 GetCurrentWaveNumber() const { return CurrentWaveIndex + 1; }
+
+	/** How many waves the match has in all. Zero without match data, which also means nothing runs. */
+	UFUNCTION(BlueprintPure, Category = "Match")
+	int32 GetWaveCount() const;
+
+	/**
+	 * Seconds until the next wave begins, or a negative number when none is coming: while a wave is
+	 * running, after the match has ended, and during the wait that follows the last wave. That last
+	 * wait runs on the same timer as the others but ends in a win, not a wave, so a countdown shown
+	 * over it would be counting to nothing.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Match")
+	float GetSecondsUntilNextWave() const;
+
+	/** Enemies the running wave still has to lose, including any yet to come out. Zero between waves. */
+	UFUNCTION(BlueprintPure, Category = "Match")
+	int32 GetRemainingEnemyCount() const;
+
+	/**
+	 * What the match is defending, as found on BeginPlay. Null before that, if the level has none,
+	 * and -- for anyone checking with IsValid -- once it has been shot down, since it destroys itself.
+	 */
+	UFUNCTION(BlueprintPure, Category = "Match")
+	AArenaShooterObjective* GetBase() const { return Base; }
 
 protected:
 	virtual void BeginPlay() override;
